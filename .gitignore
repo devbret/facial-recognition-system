@@ -1,0 +1,8 @@
+known_faces/*
+!known_faces/.gitkeep
+input/*
+!input/.gitkeep
+output/
+models/*.onnx
+venv/
+__pycache__/
