@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Face Biometrics</title>
+    <link rel="stylesheet" href="main.css" />
+  </head>
+  <body>
+    <div id="tooltip" hidden></div>
+    <header>
+      <h1>Face Biometrics</h1>
+      <div class="filters">
+        <label class="ctl"
+          >Run
+          <select id="run-select"></select
+        ></label>
+        <span id="extra-filters"></span>
+      </div>
+    </header>
+    <div id="app" hidden>
+      <div id="kpis"></div>
+      <div id="board">
+        <section class="panel" id="p-faces">
+          <div class="panel-head">
+            <h2>Faces</h2>
+            <div class="panel-controls"></div>
+          </div>
+          <div class="panel-body"></div>
+        </section>
+        <section class="panel" id="p-pca">
+          <div class="panel-head">
+            <h2>Embedding Map (PCA)</h2>
+            <div class="panel-controls"></div>
+          </div>
+          <div class="panel-body"></div>
+        </section>
+        <section class="panel" id="p-similarity">
+          <div class="panel-head">
+            <h2>Similarity By Face</h2>
+            <div class="panel-controls"></div>
+          </div>
+          <div class="panel-body"></div>
+        </section>
+        <section class="panel" id="p-scatter">
+          <div class="panel-head">
+            <h2>Metric Scatter</h2>
+            <div class="panel-controls"></div>
+          </div>
+          <div class="panel-body"></div>
+        </section>
+        <section class="panel" id="p-explorer">
+          <div class="panel-head">
+            <h2>Metric Explorer</h2>
+            <div class="panel-controls"></div>
+          </div>
+          <div class="panel-body"></div>
+        </section>
+        <section class="panel" id="p-anomalies">
+          <div class="panel-head">
+            <h2>Anomalies</h2>
+            <div class="panel-controls"></div>
+          </div>
+          <div class="panel-body"></div>
+        </section>
+        <section class="panel" id="p-matrix">
+          <div class="panel-head">
+            <h2>Embedding Similarity</h2>
+            <div class="panel-controls"></div>
+          </div>
+          <div class="panel-body"></div>
+        </section>
+        <section class="panel" id="p-fingerprints">
+          <div class="panel-head">
+            <h2>Embedding Fingerprints</h2>
+            <div class="panel-controls"></div>
+          </div>
+          <div class="panel-body"></div>
+        </section>
+        <section class="panel" id="p-trends">
+          <div class="panel-head">
+            <h2>Across Runs</h2>
+            <div class="panel-controls"></div>
+          </div>
+          <div class="panel-body"></div>
+        </section>
+        <section class="panel" id="p-table">
+          <div class="panel-head">
+            <h2>All Readings</h2>
+            <div class="panel-controls"></div>
+          </div>
+          <div class="panel-body"></div>
+        </section>
+      </div>
+    </div>
+    <script src="main.js"></script>
+  </body>
+</html>

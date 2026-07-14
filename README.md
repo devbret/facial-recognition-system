@@ -1,5 +1,7 @@
 # Facial Recognition System
 
+![Screenshot from the facial biometric data dashboard.](https://hosting.photobucket.com/bbcfb0d4-be20-44a0-94dc-65bff8947cf2/22490fe4-4839-435b-abcc-696f025239e9.png)
+
 Automated facial recognition system which identifies known people in photographs with a single command.
 
 ## Overview
