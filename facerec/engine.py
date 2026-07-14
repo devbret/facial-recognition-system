@@ -15,6 +15,7 @@ except AttributeError:
 
 DEFAULT_THRESHOLD = 0.363
 MAX_DETECT_SIZE = 1024
+LANDMARK_NAMES = ("right_eye", "left_eye", "nose", "mouth_right", "mouth_left")
 
 
 @dataclass
@@ -22,6 +23,7 @@ class Face:
     box: tuple[int, int, int, int]
     score: float
     embedding: np.ndarray
+    landmarks: dict[str, tuple[float, float]]
 
     @property
     def area(self) -> int:
@@ -50,7 +52,17 @@ class FaceEngine:
                 x, y = max(0, x - pad), max(0, y - pad)
                 w, h = min(w, img_w - x), min(h, img_h - y)
                 if w > 0 and h > 0:
-                    faces.append(Face(box=(x, y, w, h), score=face.score, embedding=face.embedding))
+                    faces.append(
+                        Face(
+                            box=(x, y, w, h),
+                            score=face.score,
+                            embedding=face.embedding,
+                            landmarks={
+                                name: (px - pad, py - pad)
+                                for name, (px, py) in face.landmarks.items()
+                            },
+                        )
+                    )
         return faces
 
     def _extract(self, image: np.ndarray) -> list[Face]:
@@ -72,10 +84,16 @@ class FaceEngine:
             aligned = self._recognizer.alignCrop(det_img, row)
             feat = self._recognizer.feature(aligned).flatten().astype(np.float32)
             feat /= np.linalg.norm(feat) + 1e-10
-            x, y, bw, bh = (row[:4] / scale).round().astype(int)
+            x, y, bw, bh = (int(v) for v in (row[:4] / scale).round())
             x, y = max(0, x), max(0, y)
             bw, bh = min(bw, img_w - x), min(bh, img_h - y)
-            faces.append(Face(box=(x, y, bw, bh), score=float(row[-1]), embedding=feat))
+            points = (row[4:14] / scale).reshape(5, 2)
+            landmarks = {
+                name: (float(px), float(py)) for name, (px, py) in zip(LANDMARK_NAMES, points)
+            }
+            faces.append(
+                Face(box=(x, y, bw, bh), score=float(row[-1]), embedding=feat, landmarks=landmarks)
+            )
         return faces
 
 
