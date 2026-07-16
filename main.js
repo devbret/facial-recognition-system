@@ -537,12 +537,12 @@ function renderFaces() {
   const idx = state.ui.faceIdx;
   const prev = el("button", {
     class: "nav-btn",
-    text: "‹",
+    text: "<",
     "aria-label": "previous face",
   });
   const next = el("button", {
     class: "nav-btn",
-    text: "›",
+    text: ">",
     "aria-label": "next face",
   });
   prev.disabled = idx === 0;
@@ -567,20 +567,20 @@ function renderFaces() {
     el("div", { class: "face-head" }, [
       el("span", { class: "face-name", text: faceTag(f, i) }),
       isMatched(f)
-        ? el("span", { class: "badge good", text: "✓ Matched" })
+        ? el("span", { class: "badge good", text: "+ Matched" })
         : el("span", { class: "badge", text: "? Unknown" }),
     ]),
   );
   body.append(
     el("div", {
       class: "face-sub",
-      text: `${f.image} · face ${f.face} · ${f.image_size.width}×${f.image_size.height}px`,
+      text: `${f.image} | face ${f.face} | ${f.image_size.width}x${f.image_size.height}px`,
     }),
   );
   body.append(meter(f.similarity));
   const mini = el("div", { class: "mini" });
   const rows = [
-    ["Roll", fmt(f.metrics.roll_degrees) + "°"],
+    ["Roll", fmt(f.metrics.roll_degrees) + " deg"],
     ["Symmetry", fmt(f.metrics.bilateral_symmetry)],
     ["Sharpness", fmt(f.metrics.sharpness)],
     ["Face Area", (f.metrics.face_area_ratio * 100).toFixed(1) + "%"],
@@ -622,7 +622,12 @@ function anomaliesFor(vis) {
         `low detector confidence (${fmt(f.detector_confidence)})`,
       );
     if (Math.abs(f.metrics.roll_degrees) > 15)
-      add(i, f, "warn", `strong head tilt (${fmt(f.metrics.roll_degrees)}°)`);
+      add(
+        i,
+        f,
+        "warn",
+        `strong head tilt (${fmt(f.metrics.roll_degrees)} deg)`,
+      );
     if (f.metrics.bilateral_symmetry < 0.9)
       add(
         i,
@@ -676,11 +681,11 @@ function renderAnomalies() {
       el("div", { class: "anom-row" }, [
         el("span", {
           class: `anom-ic ${it.sev}`,
-          text: it.sev === "crit" ? "●" : "▲",
+          text: it.sev === "crit" ? "!!" : "!",
         }),
         el("span", {
           class: "anom-face",
-          text: `${faceTag(it.f, it.i)} · ${it.f.image}`,
+          text: `${faceTag(it.f, it.i)} | ${it.f.image}`,
         }),
         el("span", { class: "anom-text", text: it.text }),
       ]),
@@ -1151,7 +1156,7 @@ function renderMatrix() {
     el("div", {
       class: "mx-h",
       text: `F${i + 1}`,
-      title: `${faceTag(f, i)} · ${f.image}`,
+      title: `${faceTag(f, i)} | ${f.image}`,
     });
   for (const v of vis) grid.append(hdr(v));
   for (const a of vis) {
@@ -1296,7 +1301,7 @@ function renderTrends() {
   document.getElementById("p-trends").hidden = single;
   document.getElementById("board").classList.toggle("no-trends", single);
   if (single) return;
-  setPanel("trends", [], [note("Loading runs…")]);
+  setPanel("trends", [], [note("Loading runs...")]);
   ensureAllRuns().then(() => {
     if (tok === trendToken) fillTrends();
   });
@@ -1531,7 +1536,7 @@ function renderTable() {
             class: "sortable",
             text:
               c.key +
-              (sort && sort.key === c.key ? (sort.dir > 0 ? " ▲" : " ▼") : ""),
+              (sort && sort.key === c.key ? (sort.dir > 0 ? " ^" : " v") : ""),
           });
           th.addEventListener("click", () => {
             state.ui.sort =
