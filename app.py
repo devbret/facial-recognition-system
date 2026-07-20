@@ -35,7 +35,14 @@ except ImportError:
         "  venv/bin/pip install -r requirements.txt"
     )
 
-from facerec.engine import DEFAULT_THRESHOLD, Face, FaceEngine, load_image
+from facerec.engine import (
+    DEFAULT_PROBABLE_THRESHOLD,
+    DEFAULT_SCORE_THRESHOLD,
+    DEFAULT_THRESHOLD,
+    Face,
+    FaceEngine,
+    load_image,
+)
 from facerec.models import fetch_models, missing_models
 
 KNOWN_DIR = ROOT / "known_faces"
@@ -44,6 +51,7 @@ OUTPUT_DIR = ROOT / "output"
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"}
 
 RED = (0, 0, 220)
+ORANGE = (0, 140, 230)
 GRAY = (140, 140, 140)
 
 
@@ -92,7 +100,8 @@ def enroll_known_faces(engine: FaceEngine, log) -> Gallery:
                 continue
             if len(faces) > 1:
                 log(f"  note: {len(faces)} faces in {path.relative_to(ROOT)}, using the largest")
-            gallery.add(person.name, max(faces, key=lambda f: f.area).embedding)
+            confident = [f for f in faces if f.score >= 0.5] or faces
+            gallery.add(person.name, max(confident, key=lambda f: f.area).embedding)
             enrolled += 1
         log(f"  {person.name}: {enrolled} reference photo(s)")
     if not gallery.labels:
@@ -168,9 +177,9 @@ def face_metrics(face: Face, image: np.ndarray) -> dict[str, float]:
     return {k: (v if isinstance(v, int) else round(v, 4)) for k, v in values.items()}
 
 
-def annotate(image: np.ndarray, face: Face, label: str, matched: bool) -> None:
+def annotate(image: np.ndarray, face: Face, label: str, tier: str) -> None:
     x, y, w, h = face.box
-    color = RED if matched else GRAY
+    color = {"matched": RED, "probable": ORANGE}.get(tier, GRAY)
     cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
     (tw, th), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
     ty = y - 8 if y - th - baseline - 8 >= 0 else y + h + th + 8
@@ -178,7 +187,9 @@ def annotate(image: np.ndarray, face: Face, label: str, matched: bool) -> None:
     cv2.putText(image, label, (x + 2, ty), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
 
 
-def run(images: list[Path], threshold: float) -> Path:
+def run(
+    images: list[Path], threshold: float, probable_threshold: float, detect_threshold: float
+) -> Path:
     run_dir = OUTPUT_DIR / datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     annotated_dir = run_dir / "annotated"
     annotated_dir.mkdir(parents=True, exist_ok=True)
@@ -190,10 +201,11 @@ def run(images: list[Path], threshold: float) -> Path:
         report.append(line)
 
     log(f"Facial recognition run  {datetime.now():%Y-%m-%d %H:%M:%S}")
-    log(f"Threshold: {threshold}")
+    log(f"Match threshold: {threshold}  (probable from {probable_threshold})")
+    log(f"Detection threshold: {detect_threshold}")
     log("")
     log("Enrolling known faces:")
-    engine = FaceEngine()
+    engine = FaceEngine(score_threshold=detect_threshold)
     gallery = enroll_known_faces(engine, log)
     log(
         "Known people: "
@@ -204,6 +216,7 @@ def run(images: list[Path], threshold: float) -> Path:
     rows: list[dict] = []
     face_records: list[dict] = []
     matched_total = 0
+    probable_total = 0
 
     for path in images:
         try:
@@ -215,15 +228,23 @@ def run(images: list[Path], threshold: float) -> Path:
         log(f"{path.name}: {len(faces)} face(s)")
         for i, face in enumerate(faces, start=1):
             name, score, best_label = gallery.match(face.embedding, threshold)
-            matched_total += name is not None
+            if name is not None:
+                tier, shown = "matched", name
+            elif best_label is not None and score >= probable_threshold:
+                tier, shown = "probable", f"{best_label}?"
+            else:
+                tier, shown = "unknown", "Unknown"
+            matched_total += tier == "matched"
+            probable_total += tier == "probable"
             x, y, w, h = face.box
             metrics = face_metrics(face, image)
-            log(f"  face {i}: {name or 'Unknown'} (similarity {score:.3f}) at x={x} y={y} w={w} h={h}")
+            log(f"  face {i}: {shown} (similarity {score:.3f}) at x={x} y={y} w={w} h={h}")
             rows.append(
                 {
                     "image": path.name,
                     "face": i,
-                    "name": name or "Unknown",
+                    "name": shown,
+                    "tier": tier,
                     "best_match": best_label or "",
                     "similarity": f"{score:.4f}",
                     "x": x,
@@ -239,9 +260,10 @@ def run(images: list[Path], threshold: float) -> Path:
                     "image": path.name,
                     "image_size": {"width": image.shape[1], "height": image.shape[0]},
                     "face": i,
-                    "name": name or "Unknown",
+                    "name": shown,
+                    "tier": tier,
                     "best_match": best_label,
-                    "matched": name is not None,
+                    "matched": tier == "matched",
                     "similarity": round(score, 4),
                     "detector_confidence": round(face.score, 4),
                     "box": {"x": x, "y": y, "width": w, "height": h},
@@ -252,13 +274,14 @@ def run(images: list[Path], threshold: float) -> Path:
                     "embedding": [round(float(v), 6) for v in face.embedding],
                 }
             )
-            annotate(image, face, f"{name or 'Unknown'} ({score:.3f})", matched=name is not None)
+            annotate(image, face, f"{shown} ({score:.3f})", tier)
         cv2.imwrite(str(annotated_dir / path.name), image)
 
     log("")
     log(
         f"Summary: {len(images)} image(s), {len(rows)} face(s), "
-        f"{matched_total} matched, {len(rows) - matched_total} unknown"
+        f"{matched_total} matched, {probable_total} probable, "
+        f"{len(rows) - matched_total - probable_total} unknown"
     )
 
     (run_dir / "results.txt").write_text("\n".join(report) + "\n")
@@ -266,7 +289,7 @@ def run(images: list[Path], threshold: float) -> Path:
         writer = csv.DictWriter(
             f,
             fieldnames=[
-                "image", "face", "name", "best_match", "similarity",
+                "image", "face", "name", "tier", "best_match", "similarity",
                 "x", "y", "width", "height", "detector_confidence",
                 *METRIC_FIELDS,
             ],
@@ -276,9 +299,12 @@ def run(images: list[Path], threshold: float) -> Path:
     biometrics = {
         "run": f"{datetime.now():%Y-%m-%d %H:%M:%S}",
         "threshold": threshold,
+        "probable_threshold": probable_threshold,
+        "detection_threshold": detect_threshold,
         "images_analyzed": len(images),
         "faces_found": len(face_records),
         "faces_matched": matched_total,
+        "faces_probable": probable_total,
         "known_people": gallery.counts(),
         "faces": face_records,
     }
@@ -321,6 +347,24 @@ def main() -> int:
         help=f"cosine similarity needed for a match (default: {DEFAULT_THRESHOLD})",
     )
     parser.add_argument(
+        "--probable-threshold",
+        type=float,
+        default=DEFAULT_PROBABLE_THRESHOLD,
+        help=(
+            "similarity from which a below-threshold face is labeled as a tentative "
+            f"'Name?' match instead of Unknown (default: {DEFAULT_PROBABLE_THRESHOLD})"
+        ),
+    )
+    parser.add_argument(
+        "--detect-threshold",
+        type=float,
+        default=DEFAULT_SCORE_THRESHOLD,
+        help=(
+            "detector confidence needed to count as a face "
+            f"(default: {DEFAULT_SCORE_THRESHOLD}); lower it to find more faces"
+        ),
+    )
+    parser.add_argument(
         "--dashboard",
         action="store_true",
         help="open the visualization dashboard in your browser",
@@ -334,7 +378,7 @@ def main() -> int:
     INPUT_DIR.mkdir(exist_ok=True)
 
     if missing_models():
-        print("First run: downloading face models (~39 MB) ...")
+        print("First run: downloading face models (~340 MB) ...")
         fetch_models()
 
     images = [Path(p) for p in args.images] or list_images(INPUT_DIR)
@@ -345,7 +389,7 @@ def main() -> int:
         )
         return 1
 
-    run_dir = run(images, args.threshold)
+    run_dir = run(images, args.threshold, args.probable_threshold, args.detect_threshold)
     print(
         f"\nResults written to {run_dir.relative_to(ROOT)}/ "
         "(results.txt, results.csv, biometrics.json, annotated/)"
