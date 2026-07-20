@@ -2,15 +2,15 @@
 
 ![Screenshot from the facial biometric data dashboard.](https://hosting.photobucket.com/bbcfb0d4-be20-44a0-94dc-65bff8947cf2/22490fe4-4839-435b-abcc-696f025239e9.png)
 
-Facial recognition system which identifies known people in your photographs with a single local command by matching every detected face against your own reference photos.
+Facial recognition system which identifies known people in photographs with a single local command by matching every detected face against reference photos.
 
-## Overview
+## Application Overview
 
 Teach the application who people are through file management; give each person a folder of reference photos inside `known_faces/`, drop the images you want analysed into `input` and run `python3 app.py`. All processing happens locally on your machine. So no photo or biometric data ever leaves.
 
-Under the hood, OpenCV's `YuNet` model detects each face and its landmarks, then `SFace` converts the face into an embedding to be matched against your references. Two refinements keep accuracy high on real-world photos. First, images are normalized to grayscale before embedding so color grading and filters cannot skew a match. And secondly, tight close-ups are automatically retried with padding so the detector can find faces that fill the frame.
+Under the hood, OpenCV's `YuNet` model detects each face and its landmarks, then an `ArcFace` recognition model converts each face into an embedding to be matched against your references. Both models are fed full-color images so detection and matching work consistently across all lighting conditions.
 
-Each run writes its results to a folder inside `output`, containing a human-readable `results.txt`, `results.csv`, `biometrics.json` and an `annotated` folder holding a copy of every image with a red box around each identified person and a gray box around unknown faces. Running `python3 -m http.server` opens the results in a visual dashboard in your browser.
+Each run writes its results to a folder inside `output`, containing a human-readable `results.txt`, `results.csv`, `biometrics.json` and an `annotated` folder holding a copy of each analyzed image with a red box around each identified person, an orange box around tentative matches and a gray box around unknown faces.
 
 ## Basic Setup Instructions
 
@@ -62,7 +62,7 @@ This project repo is intended to demonstrate an ability to do the following:
 
 - Run a modern facial recognition workflow entirely on the local machine
 
-- Normalize images to grayscale and automatically retry tight crops with padding
+- Automatically retry unrecognized photos with lighting equalization and padded crops
 
 - Produce records of every run to power the visual dashboard
 
