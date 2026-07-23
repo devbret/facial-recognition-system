@@ -322,6 +322,32 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
         pass
 
 
+def fetch_reference_photos() -> int:
+    KNOWN_DIR.mkdir(exist_ok=True)
+    try:
+        from facerec.fetch import fetch_reference_faces
+    except ImportError as exc:
+        sys.exit(
+            "The --fetch feature needs extra packages (requests, python-dotenv).\n"
+            "Install them with:  venv/bin/pip install -r requirements.txt\n"
+            f"({exc})"
+        )
+
+    summary = fetch_reference_faces()
+    faces_root = Path(summary["faces_root"])
+    print(
+        f"\nDownloaded {summary['downloaded']} reference photo(s) for "
+        f"{len(summary['names'])} name(s) into {faces_root.name}/ "
+        f"(skipped {summary['skipped']}, {summary['search_errors']} search error(s))."
+    )
+    print(
+        "Review each folder, remove any photos that show the wrong person, then "
+        "add images to analyse in "
+        f"{INPUT_DIR.name}/ and run: python3 app.py"
+    )
+    return 0
+
+
 def serve_dashboard() -> int:
     handler = functools.partial(QuietHandler, directory=str(ROOT))
     with http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler) as httpd:
@@ -369,10 +395,21 @@ def main() -> int:
         action="store_true",
         help="open the visualization dashboard in your browser",
     )
+    parser.add_argument(
+        "--fetch",
+        action="store_true",
+        help=(
+            "download reference photos for the names listed in .env into "
+            f"{KNOWN_DIR.name}/<name>/, then exit (see .env.template)"
+        ),
+    )
     args = parser.parse_args()
 
     if args.dashboard:
         return serve_dashboard()
+
+    if args.fetch:
+        return fetch_reference_photos()
 
     KNOWN_DIR.mkdir(exist_ok=True)
     INPUT_DIR.mkdir(exist_ok=True)

@@ -38,7 +38,7 @@ Below are the required software programs and instructions for installing and usi
 
 7. Install the needed dependencies: `pip install -r requirements.txt`
 
-8. Create a folder of reference photos for each face you would like identified, for example: `known_faces/Jane Doe/photo.jpg`
+8. Create a folder of reference photos for each face you would like identified in `known_faces`
 
 9. Place the images you want analysed into the `input` folder
 
@@ -53,6 +53,16 @@ Below are the required software programs and instructions for installing and usi
 14. When finished, close the HTTP server: `CTRL + C`
 
 15. Exit the virtual environment: `deactivate`
+
+### Fetching Reference Photos Automatically
+
+Instead of manually gathering reference photos, you can name the people you want to enroll and let the app collect their photos for you:
+
+1. Copy `.env.template` to `.env`: `cp .env.template .env`
+
+2. Add your details to the `.env` file
+
+3. Run the application: `python3 app.py --fetch`
 
 ## Other Considerations
 
