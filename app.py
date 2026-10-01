@@ -317,7 +317,27 @@ def run(
     return run_dir
 
 
-class QuietHandler(http.server.SimpleHTTPRequestHandler):
+DASHBOARD_FILES = {ROOT, ROOT / "index.html", ROOT / "main.js", ROOT / "main.css"}
+DASHBOARD_DIRS = (INPUT_DIR, OUTPUT_DIR)
+DASHBOARD_HOSTS = ("127.0.0.1", "localhost")
+
+
+class DashboardHandler(http.server.SimpleHTTPRequestHandler):
+    def send_head(self):
+        host = (self.headers.get("Host") or "").rsplit(":", 1)[0]
+        if host not in DASHBOARD_HOSTS:
+            self.send_error(http.HTTPStatus.FORBIDDEN)
+            return None
+        path = Path(self.translate_path(self.path))
+        if path not in DASHBOARD_FILES and not any(path.is_relative_to(d) for d in DASHBOARD_DIRS):
+            self.send_error(http.HTTPStatus.NOT_FOUND)
+            return None
+        return super().send_head()
+
+    def list_directory(self, path) -> None:
+        self.send_error(http.HTTPStatus.NOT_FOUND)
+        return None
+
     def log_message(self, *args) -> None:
         pass
 
@@ -349,7 +369,7 @@ def fetch_reference_photos() -> int:
 
 
 def serve_dashboard() -> int:
-    handler = functools.partial(QuietHandler, directory=str(ROOT))
+    handler = functools.partial(DashboardHandler, directory=str(ROOT))
     with http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler) as httpd:
         url = f"http://127.0.0.1:{httpd.server_address[1]}/"
         print(f"Dashboard running at {url} (Ctrl+C to stop)")

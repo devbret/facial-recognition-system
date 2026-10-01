@@ -46,13 +46,11 @@ Below are the required software programs and instructions for installing and usi
 
 11. Results will be returned to the `output` directory
 
-12. Launch an HTTP server to explore analysis of results: `python3 -m http.server`
+12. Launch the dashboard to explore analysis of results, which opens in your browser: `python3 app.py --dashboard`
 
-13. Access the frontend dashboard in a browser: `http://localhost:8000`
+13. When finished, close the dashboard: `CTRL + C`
 
-14. When finished, close the HTTP server: `CTRL + C`
-
-15. Exit the virtual environment: `deactivate`
+14. Exit the virtual environment: `deactivate`
 
 ### Fetching Reference Photos Automatically
 
